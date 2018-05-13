@@ -16,25 +16,23 @@ void activate_matrix(matrix m, ACTIVATION a)
             double x = m.data[i][j];
             if(a == LOGISTIC){
                 // TODO
-                m.data[i][j] = 1 / (1 + powf(M_E, -x));
+                m.data[i][j] = 1 / (1 + expf(-x));
             } else if (a == RELU){
                 // TODO
                 m.data[i][j] = x < 0 ? 0 : x;
             } else if (a == LRELU){
                 // TODO
-                m.data[i][j] = x < 0 ? 0.01*x : x;
+                m.data[i][j] = x < 0 ? 0.1*x : x;
             } else if (a == SOFTMAX){
                 // TODO
-                m.data[i][j] = powf(M_E, x);
+                m.data[i][j] = expf(x);
             }
             sum += m.data[i][j];
         }
         if (a == SOFTMAX) {
             // TODO: have to normalize by sum if we are using SOFTMAX
-            for (i = 0; i < m.rows; ++i) { 
-                for (j = 0; j < m.cols; ++j) { 
-                    m.data[i][j] /= sum;
-                }
+            for (j = 0; j < m.cols; j++) {
+                m.data[i][j] /= sum;
             }
         }
     }
@@ -56,7 +54,7 @@ void gradient_matrix(matrix m, ACTIVATION a, matrix d)
             if (a == LOGISTIC) gradient = x * (1 - x);
             if (a == LINEAR || a == SOFTMAX) gradient = 1;
             if (a == RELU) gradient = x == 0 ? 0 : 1; 
-            if (a == LRELU) gradient = x < 0 ? 0.01 : 1;
+            if (a == LRELU) gradient = x < 0 ? 0.1 : 1;
             d.data[i][j] *= gradient;
         }
     }
@@ -73,7 +71,7 @@ matrix forward_layer(layer *l, matrix in)
 
 
     // TODO: fix this! multiply input by weights and apply activation function.
-    matrix out = matrix_mult_matrix(in, l->w);
+    matrix out = matrix_mult_matrix(l->in, l->w);
     activate_matrix(out, l->activation);
 
 
@@ -125,14 +123,14 @@ void update_layer(layer *l, double rate, double momentum, double decay)
     matrix v = make_matrix(l->w.rows, l->w.cols);
     for (int i = 0; i < v.rows; i++) {
         for (int j = 0; j < v.cols; j++) {
-            v.data[i][j] = l->dw.data[i][j] - rate*l->w.data[i][j] + momentum*l->v.data[i][j];
+            v.data[i][j] = l->dw.data[i][j] - decay*l->w.data[i][j] + momentum*l->v.data[i][j];
         }
     }
     free_matrix(l->v);
     l->v = v;
 
     // Update l->w
-    matrix w = axpy_matrix(decay, l->v, l->w);
+    matrix w = axpy_matrix(rate, l->v, l->w);
     free_matrix(l->w);
     l->w = w; 
 
